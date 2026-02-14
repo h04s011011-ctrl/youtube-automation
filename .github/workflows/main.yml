@@ -18,26 +18,19 @@ jobs:
         run: |
           curl -L "${{ github.event.client_payload.fire_url }}" -o fire.mp3
           curl -L "${{ github.event.client_payload.rain_url }}" -o rain.mp3
-          # 背景素材（動画がない場合はこれを使う）
           curl -L "https://images.pexels.com/photos/249614/pexels-photo-249614.jpeg" -o backup.jpg
 
-      - name: Render Video
+      - name: Render Test Video
         run: |
-          # 映像(base_video.mp4)があれば使い、なければ画像を使います
-          if [ -f "base_video.mp4" ]; then
-            INPUT="-stream_loop -1 -i base_video.mp4"
-          else
-            INPUT="-loop 1 -i backup.jpg"
-          fi
-
-          # ⚠️ テストのため一旦 「60秒 (-t 60)」 に設定しています
-          ffmpeg $INPUT -i fire.mp3 -i rain.mp3 \
+          # ⚠️ まずは「60秒 (-t 60)」でテスト！
+          # これなら数分で終わって「緑のチェック」がつきます
+          ffmpeg -loop 1 -i backup.jpg -i fire.mp3 -i rain.mp3 \
             -filter_complex "[1:a][2:a]amix=inputs=2:duration=longest[aout]" \
             -map 0:v -map "[aout]" \
-            -c:v libx264 -preset ultrafast -crf 28 -t 60 -pix_fmt yuv420p output.mp4
+            -c:v libx264 -preset ultrafast -t 60 -pix_fmt yuv420p output.mp4
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Short-Test-Video
+          name: 1min-Test-Video
           path: output.mp4
