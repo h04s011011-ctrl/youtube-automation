@@ -16,29 +16,28 @@ jobs:
 
       - name: Download Sounds
         run: |
-          # iPhoneから送られた2つの音源をダウンロード
+          # iPhoneから送られた2つの音源(焚き火と雨)を別々に保存
           curl -L "${{ github.event.client_payload.fire_url }}" -o fire.mp3
           curl -L "${{ github.event.client_payload.rain_url }}" -o rain.mp3
-          # 背景動画（あとでリポジトリにアップするもの）
-          # もし未アップなら、一旦サンプルの焚き火画像で代用するようにしています
+          # バックアップ用の画像
           curl -L "https://images.pexels.com/photos/249614/pexels-photo-249614.jpeg" -o backup.jpg
 
       - name: Render 4K Mixed Video
         run: |
-          # 背景が動画(base_video.mp4)ならそれを使い、なければ画像を使います
+          # 映像(base_video.mp4)があれば使い、なければ画像を使います
           if [ -f "base_video.mp4" ]; then
             INPUT="-stream_loop -1 -i base_video.mp4"
           else
             INPUT="-loop 1 -i backup.jpg"
           fi
 
-          # 2つの音をミックス(amix)して3時間(10800秒)生成
+          # 2つの音をミックス(amix)して長時間(30分=1800秒)生成
           ffmpeg $INPUT -i fire.mp3 -i rain.mp3 \
             -filter_complex "[1:a][2:a]amix=inputs=2:duration=longest[aout]" \
             -map 0:v -map "[aout]" \
-            -c:v libx264 -preset fast -crf 22 -t 10800 -pix_fmt yuv420p output.mp4
+            -c:v libx264 -preset fast -crf 22 -t 1800 -pix_fmt yuv420p output.mp4
 
-      - name: Upload Finished Video
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: 4K-Healing-Video
