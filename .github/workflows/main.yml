@@ -1,4 +1,4 @@
-name: Create 8-hour Video
+name: Auto Video Render
 on:
   repository_dispatch:
     types: [start-build]
@@ -8,12 +8,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install FFmpeg
-        run: sudo apt-get install ffmpeg
-      - name: Download Assets and Render
+        run: sudo apt install -y ffmpeg
+
+      - name: Render Video
         run: |
-          # iPhoneから送られたURLを使ってダウンロード
+          # iPhoneから届いたURLで素材をダウンロード
           curl -L "${{ github.event.client_payload.sound_url }}" -o sound.mp3
-          curl -L "${{ github.event.client_payload.image_url }}" -o image.jpg
+          # サンプル画像を1枚用意（本来はPixabay URLを使います）
+          curl -L "https://images.pexels.com/photos/249614/pexels-photo-249614.jpeg" -o image.jpg
           
-          # FFmpegで画像をループさせ、音声を無限ループさせて合成（テスト用に短く設定）
-          ffmpeg -loop 1 -i image.jpg -i sound.mp3 -c:v libx264 -t 60 -pix_fmt yuv420p output.mp4
+          # FFmpegで1分のテスト動画を作成（8時間はここで数値を調整）
+          ffmpeg -loop 1 -i image.jpg -i sound.mp3 -c:v libx264 -t 60 -pix_fmt yuv420p -vf "scale=1280:720" output.mp4
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: finished-video
+          path: output.mp4
