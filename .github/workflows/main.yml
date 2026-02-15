@@ -24,8 +24,8 @@ jobs:
           REAL_VIDEO=$(ls -t *.mp4 | grep -v output.mp4 | head -n 1)
           
           # 【新ミキシング比率】
-          # fire (1:a): 1.0 → 0.6 (火をマイルドにし、迫りくる音を抑える)
-          # rain (2:a): 0.3 → 0.4 (雨をわずかに上げ、室内に響く音を演出)
+          # fire (1:a): 1.0 → 0.4(火をマイルドにし、迫りくる音を抑える)
+          # rain (2:a): 0.3 → 0.5(雨をわずかに上げ、室内に響く音を演出)
           ffmpeg -stream_loop -1 -i "$REAL_VIDEO" \
             -stream_loop -1 -i fire.mp3 \
             -stream_loop -1 -i rain.mp3 \
