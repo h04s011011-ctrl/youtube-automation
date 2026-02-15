@@ -1,4 +1,4 @@
-name: 4K Fire and Rain Factory
+name: 4K Ultra-High Quality Factory
 
 on:
   repository_dispatch:
@@ -19,19 +19,24 @@ jobs:
           curl -L "${{ github.event.client_payload.fire_url }}" -o fire.mp3
           curl -L "${{ github.event.client_payload.rain_url }}" -o rain.mp3
 
-      - name: Render 1-Minute Video
+      - name: Render High-Quality 1-Minute Video
         run: |
-          # 💡 ここが魔法！ 一番新しくアップロードされたmp4を自動で探します
+          # 最新の動画ファイルを自動取得
           REAL_VIDEO=$(ls -t *.mp4 | grep -v output.mp4 | head -n 1)
-          echo "Using video: $REAL_VIDEO"
           
-          ffmpeg -stream_loop -1 -i "$REAL_VIDEO" -i fire.mp3 -i rain.mp3 \
-            -filter_complex "[1:a][2:a]amix=inputs=2:duration=longest[aout]" \
+          # 1. 音のループ修正: 全ての入力に -stream_loop -1 を追加
+          # 2. 画質向上: 4K(3840x2160)へアップスケールし、Lanczosフィルターでくっきりさせます
+          # 3. 圧縮率の変更: -crf 18 (高品質) と -preset slow (丁寧に処理) を採用
+          ffmpeg -stream_loop -1 -i "$REAL_VIDEO" \
+            -stream_loop -1 -i fire.mp3 \
+            -stream_loop -1 -i rain.mp3 \
+            -filter_complex "[1:a][2:a]amix=inputs=2:duration=first[aout]" \
             -map 0:v -map "[aout]" \
-            -c:v libx264 -preset fast -crf 23 -t 60 -pix_fmt yuv420p output.mp4
+            -vf "scale=3840:2160:flags=lanczos" \
+            -c:v libx264 -preset slow -crf 18 -t 60 -pix_fmt yuv420p output.mp4
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Final-Test-Video
+          name: 4K-HighQuality-Test
           path: output.mp4
