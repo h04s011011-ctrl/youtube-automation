@@ -1,4 +1,4 @@
-name: Nature Canvas 4K Pseudo-Binaural Factory
+name: Nature Canvas 1-Min Master Production
 
 on:
   repository_dispatch:
@@ -19,20 +19,18 @@ jobs:
           curl -L "${{ github.event.client_payload.fire_url }}" -o fire.mp3
           curl -L "${{ github.event.client_payload.rain_url }}" -o rain.mp3
 
-      - name: Render Pseudo-Binaural Video
+      - name: Render 1-Minute Story Video
         run: |
-          # 最新のmp4を自動取得
           REAL_VIDEO=$(ls -t *.mp4 | grep -v output.mp4 | head -n 1)
           
-          # 【音響エンジニアリング設定】
-          # fire (1:a): 右80%/左20%の配置、音量0.6
-          # rain (2:a): 左80%/右20%の配置、音量0.4
-          # -vf scale=3840:2160: 4Kアップスケール
+          # 【音響演出設定】
+          # fire ([1:a]): 右80%配置。5秒からIN、50秒からOUT。音量0.6。
+          # rain ([2:a]): 左80%配置。最初から最後まで一定。音量0.4。
           ffmpeg -stream_loop -1 -i "$REAL_VIDEO" \
             -stream_loop -1 -i fire.mp3 \
             -stream_loop -1 -i rain.mp3 \
             -filter_complex \
-            "[1:a]volume=0.6,pan=stereo|c0=0.2*c0|c1=0.8*c0[f]; \
+            "[1:a]volume=0.6,afade=t=in:st=5:d=5,afade=t=out:st=50:d=5,pan=stereo|c0=0.2*c0|c1=0.8*c0[f]; \
              [2:a]volume=0.4,pan=stereo|c0=0.8*c0|c1=0.2*c0[r]; \
              [f][r]amix=inputs=2:duration=first[aout]" \
             -map 0:v -map "[aout]" \
@@ -42,5 +40,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Nature-Canvas-Binaural-4K
+          name: Nature-Canvas-1Min-Final
           path: output.mp4
