@@ -1,4 +1,4 @@
-name: 4K Ultra-High Quality Factory
+name: Nature Canvas 4K Video Factory
 
 on:
   repository_dispatch:
@@ -16,21 +16,26 @@ jobs:
 
       - name: Download Sounds
         run: |
+          # Pythonistaから送られてきたURLをダウンロード
           curl -L "${{ github.event.client_payload.fire_url }}" -o fire.mp3
           curl -L "${{ github.event.client_payload.rain_url }}" -o rain.mp3
 
-      - name: Render High-Quality 1-Minute Video
+      - name: Render High-Quality Video
         run: |
-          # 最新の動画ファイルを自動取得
+          # 1. 一番新しいmp4ファイルを自動で材料として選ぶ
           REAL_VIDEO=$(ls -t *.mp4 | grep -v output.mp4 | head -n 1)
+          echo "Using video: $REAL_VIDEO"
           
-          # 1. 音のループ修正: 全ての入力に -stream_loop -1 を追加
-          # 2. 画質向上: 4K(3840x2160)へアップスケールし、Lanczosフィルターでくっきりさせます
-          # 3. 圧縮率の変更: -crf 18 (高品質) と -preset slow (丁寧に処理) を採用
+          # 2. FFmpegで合成
+          # -stream_loop -1: 映像も音も、指定時間まで無限ループさせる（音切れ解消）
+          # [1:a]volume=1.0: 焚き火の音量はそのまま
+          # [2:a]volume=0.3: 雨の音量を30%に絞る（バランス調整）
+          # scale=3840:2160: 4Kにアップスケール（高画質化）
+          # -crf 18: 最高クラスの画質設定
           ffmpeg -stream_loop -1 -i "$REAL_VIDEO" \
             -stream_loop -1 -i fire.mp3 \
             -stream_loop -1 -i rain.mp3 \
-            -filter_complex "[1:a][2:a]amix=inputs=2:duration=first[aout]" \
+            -filter_complex "[1:a]volume=1.0[a1];[2:a]volume=0.3[a2];[a1][a2]amix=inputs=2:duration=first[aout]" \
             -map 0:v -map "[aout]" \
             -vf "scale=3840:2160:flags=lanczos" \
             -c:v libx264 -preset slow -crf 18 -t 60 -pix_fmt yuv420p output.mp4
@@ -38,5 +43,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: 4K-HighQuality-Test
+          name: Nature-Canvas-Final-Test
           path: output.mp4
