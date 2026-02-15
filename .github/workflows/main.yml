@@ -1,4 +1,4 @@
-name: Nature Canvas 4K Real-Mix Factory
+name: Nature Canvas 4K Pseudo-Binaural Factory
 
 on:
   repository_dispatch:
@@ -19,17 +19,22 @@ jobs:
           curl -L "${{ github.event.client_payload.fire_url }}" -o fire.mp3
           curl -L "${{ github.event.client_payload.rain_url }}" -o rain.mp3
 
-      - name: Render Real-Mix Video
+      - name: Render Pseudo-Binaural Video
         run: |
+          # 最新のmp4を自動取得
           REAL_VIDEO=$(ls -t *.mp4 | grep -v output.mp4 | head -n 1)
           
-          # 【新ミキシング比率】
-          # fire (1:a): 1.0 → 0.4(火をマイルドにし、迫りくる音を抑える)
-          # rain (2:a): 0.3 → 0.5(雨をわずかに上げ、室内に響く音を演出)
+          # 【音響エンジニアリング設定】
+          # fire (1:a): 右80%/左20%の配置、音量0.6
+          # rain (2:a): 左80%/右20%の配置、音量0.4
+          # -vf scale=3840:2160: 4Kアップスケール
           ffmpeg -stream_loop -1 -i "$REAL_VIDEO" \
             -stream_loop -1 -i fire.mp3 \
             -stream_loop -1 -i rain.mp3 \
-            -filter_complex "[1:a]volume=0.6[a1];[2:a]volume=0.4[a2];[a1][a2]amix=inputs=2:duration=first[aout]" \
+            -filter_complex \
+            "[1:a]volume=0.6,pan=stereo|c0=0.2*c0|c1=0.8*c0[f]; \
+             [2:a]volume=0.4,pan=stereo|c0=0.8*c0|c1=0.2*c0[r]; \
+             [f][r]amix=inputs=2:duration=first[aout]" \
             -map 0:v -map "[aout]" \
             -vf "scale=3840:2160:flags=lanczos" \
             -c:v libx264 -preset slow -crf 18 -t 60 -pix_fmt yuv420p output.mp4
@@ -37,5 +42,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Nature-Canvas-Real-Mix
+          name: Nature-Canvas-Binaural-4K
           path: output.mp4
