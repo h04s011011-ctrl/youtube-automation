@@ -1,44 +1,67 @@
 name: Nature Canvas 1-Min Master Production
 
 on:
+
   repository_dispatch:
+
     types: [start-build]
 
 jobs:
+
   render:
+
     runs-on: ubuntu-latest
+
     steps:
+
       - name: Checkout
+
         uses: actions/checkout@v4
 
       - name: Install FFmpeg
+
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Download Sounds
-        run: |
-          curl -L "${{ github.event.client_payload.fire_url }}" -o fire.mp3
-          curl -L "${{ github.event.client_payload.rain_url }}" -o rain.mp3
+      - name: Download All Assets
 
-      - name: Render 1-Minute Story Video
         run: |
-          REAL_VIDEO=$(ls -t *.mp4 | grep -v output.mp4 | head -n 1)
+
+          curl -L "${{ github.event.client_payload.v_url }}" -o v_source.mp4
+
+          curl -L "${{ github.event.client_payload.a_url }}" -o a_source.mp3
+
+      - name: Render Master Video
+
+        run: |
+
+          # 渡された座標を使ってFFmpegで合成
+
+          POS="${{ github.event.client_payload.overlay_pos }}"
+
           
-          # 【音響演出設定】
-          # fire ([1:a]): 右80%配置。5秒からIN、50秒からOUT。音量0.6。
-          # rain ([2:a]): 左80%配置。最初から最後まで一定。音量0.4。
-          ffmpeg -stream_loop -1 -i "$REAL_VIDEO" \
-            -stream_loop -1 -i fire.mp3 \
-            -stream_loop -1 -i rain.mp3 \
+
+          ffmpeg -loop 1 -i base_image.jpg \
+
+            -stream_loop -1 -i v_source.mp4 \
+
+            -stream_loop -1 -i a_source.mp3 \
+
             -filter_complex \
-            "[1:a]volume=0.6,afade=t=in:st=5:d=5,afade=t=out:st=50:d=5,pan=stereo|c0=0.2*c0|c1=0.8*c0[f]; \
-             [2:a]volume=0.4,pan=stereo|c0=0.8*c0|c1=0.2*c0[r]; \
-             [f][r]amix=inputs=2:duration=first[aout]" \
-            -map 0:v -map "[aout]" \
-            -vf "scale=3840:2160:flags=lanczos" \
-            -c:v libx264 -preset slow -crf 18 -t 60 -pix_fmt yuv420p output.mp4
+
+            "[1:v]scale=800:-1[over]; [0:v][over]overlay=$POS:shortest=1[outv]; \
+
+             [2:a]afade=t=in:st=0:d=2,afade=t=out:st=58:d=2[aout]" \
+
+            -map "[outv]" -map "[aout]" -t 60 -c:v libx264 -pix_fmt yuv420p output.mp4
 
       - name: Upload Artifact
+
         uses: actions/upload-artifact@v4
+
         with:
-          name: Nature-Canvas-1Min-Final
+
+          name: Nature-Canvas-Template-Result
+
           path: output.mp4
+
+```
