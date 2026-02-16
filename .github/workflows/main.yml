@@ -6,6 +6,9 @@ on:
 
     types: [start-build]
 
+    workflow_dispatch:  # 👈 これを3行目あたりに追加
+
+
 jobs:
 
   render:
