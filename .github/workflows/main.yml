@@ -1,4 +1,4 @@
-name: Nature Canvas Animator Pro PNG
+name: Nature Canvas Final Pro
 on:
   repository_dispatch:
     types: [start-build]
@@ -14,14 +14,11 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: アニメーション合成（雨・光・音）
+      - name: 合成開始
         run: |
-          # 1. 音源をダウンロード
           curl -L "${{ github.event.client_payload.rain_url }}" -o rain.mp3
           curl -L "${{ github.event.client_payload.fire_url }}" -o fire.mp3
 
-          # 2. FFmpegで合成
-          # background.png をループさせ、雨(noise)と光の揺らぎ(eq)を追加
           ffmpeg -loop 1 -i background.png -i rain.mp3 -i fire.mp3 -filter_complex \
           "[0:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080, \
            noise=alls=15:allf=t+u, \
@@ -34,5 +31,5 @@ jobs:
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: Nature-Canvas-Animated-PNG
+          name: Nature-Canvas-Perfect
           path: final_video.mp4
