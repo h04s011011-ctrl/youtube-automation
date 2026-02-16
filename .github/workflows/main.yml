@@ -1,4 +1,4 @@
-name: Nature Canvas Zero-Cost Perfect
+name: Nature Canvas Precision Master
 on:
   repository_dispatch:
     types: [start-build]
@@ -13,22 +13,31 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: 究極の0円合成（エラー＆紫化解消版）
+      - name: 精密チューニング合成
         run: |
           curl -L "${{ github.event.client_payload.rain_video }}" -o v_rain.mp4
           curl -L "${{ github.event.client_payload.fire_video }}" -o v_fire.mp4
           curl -L "${{ github.event.client_payload.rain_audio }}" -o a_rain.mp3
           curl -L "${{ github.event.client_payload.fire_audio }}" -o a_fire.mp3
 
-          # 修正ポイント：
-          # 1. 炎を scale でサイズ調整し、boxblur で端をボカす
-          # 2. pad で背景と同じ 2752x1536 のサイズに広げ、位置を暖炉（160, 810）に固定
-          # 3. [v_rain] と [fire_padded] を blend フィルターにしっかり2つ渡す
+          # --- 🛠️ 精密調整の魔法 ---
+          # 1. 雨（小粒化）: 動画を1/3のサイズに縮小し、それを3x3のグリッド状に並べて敷き詰めることで、
+          #    巨大な水滴を「繊細な小粒の雫」に変えます。
+          # 2. 炎（小型化＆配置）: サイズを「300x240」まで小さくし、暖炉の奥（x=260, y=920）に配置。
+          # 3. 色（完全保持）: 最後の合成で format=yuv420p を厳守し、元の色味を壊しません。
+
           ffmpeg -loop 1 -i background.png -i v_rain.mp4 -i v_fire.mp4 -i a_rain.mp3 -i a_fire.mp3 -filter_complex \
-          "[1:v]scale=2752:1536,format=yuva420p,colorchannelmixer=aa=0.1[rain]; \
-           [0:v][rain]overlay=shortest=1[v_rain]; \
-           [2:v]scale=550:460,boxblur=15,format=yuva420p,pad=2752:1536:160:810:black[fire_padded]; \
-           [v_rain][fire_padded]blend=all_mode='lighten':all_opacity=0.9,format=yuv420p[v_final]; \
+          "[1:v]scale=918:512,format=yuva420p,colorchannelmixer=aa=0.15[rain_small]; \
+           [rain_small]split=9[r1][r2][r3][r4][r5][r6][r7][r8][r9]; \
+           [r1][r2][r3]hstack=3[row1]; \
+           [r4][r5][r6]hstack=3[row2]; \
+           [r7][r8][r9]hstack=3[row3]; \
+           [row1][row2][row3]vstack=3,scale=2752:1536[rain_tiled]; \
+           [2:v]scale=300:240,boxblur=8,format=yuva420p[fire_small]; \
+           color=black:s=2752x1536[black_bg]; \
+           [black_bg][fire_small]overlay=x=260:y=920:shortest=1[fire_on_black]; \
+           [0:v][rain_tiled]overlay=shortest=1:format=auto[bg_rain]; \
+           [bg_rain][fire_on_black]blend=all_mode='lighten':all_opacity=1,format=yuv420p[v_final]; \
            [3:a]pan=stereo|c0=0.8*c0|c1=0.4*c1[rain_a]; \
            [4:a]afade=t=in:st=2:d=5,pan=stereo|c0=0.3*c0|c1=0.9*c1[fire_a]; \
            [rain_a][fire_a]amix=inputs=2:duration=first[aout]" \
@@ -37,5 +46,5 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Nature-Canvas-Ultimate-Result
+          name: Nature-Canvas-Precision-Result
           path: final_video.mp4
