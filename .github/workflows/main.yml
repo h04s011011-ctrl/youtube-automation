@@ -1,4 +1,4 @@
-name: Nature Canvas Final Pro
+name: Nature Canvas Dramatic Animator
 on:
   repository_dispatch:
     types: [start-build]
@@ -14,15 +14,16 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: 合成開始
+      - name: アニメーション合成（強化版エフェクト）
         run: |
           curl -L "${{ github.event.client_payload.rain_url }}" -o rain.mp3
           curl -L "${{ github.event.client_payload.fire_url }}" -o fire.mp3
 
+          # 変更点: noiseを強く(30)、明るさの揺れ幅を大きく(0.15)しました
           ffmpeg -loop 1 -i background.png -i rain.mp3 -i fire.mp3 -filter_complex \
-          "[0:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080, \
-           noise=alls=15:allf=t+u, \
-           eq=brightness='0.05*sin(t*10)+0.02*sin(t*23)'[v_effect]; \
+          "[0:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080[bg]; \
+           [bg]noise=alls=30:allf=t+u, \
+           eq=brightness='0.15*sin(t*5)+0.05*sin(t*15)'[v_effect]; \
            [1:a]pan=stereo|c0=0.8*c0|c1=0.4*c1[rain_spatial]; \
            [2:a]afade=t=in:st=2:d=5,pan=stereo|c0=0.3*c0|c1=0.9*c1[fire_spatial]; \
            [rain_spatial][fire_spatial]amix=inputs=2:duration=first[aout]" \
@@ -31,5 +32,5 @@ jobs:
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: Nature-Canvas-Perfect
+          name: Nature-Canvas-Dramatic
           path: final_video.mp4
