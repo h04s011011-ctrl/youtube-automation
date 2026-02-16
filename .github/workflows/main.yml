@@ -23,11 +23,12 @@ jobs:
           curl -L "${{ github.event.client_payload.a_url }}" -o base_audio.mp3
           
           echo "🎬 動画合成を開始..."
-          # 映像と音を合成し、最短の素材に合わせる設定
+          # より互換性の高い設定に調整
           ffmpeg -i base_video.mp4 -i base_audio.mp3 -c:v libx264 -preset superfast -crf 28 -c:a aac -b:a 128k -map 0:v:0 -map 1:a:0 -shortest -y final_video.mp4
 
       - name: Upload Result
-        uses: upload-artifact@v4
+        # 👇 ここに 'actions/' を追加しました！これが正解の形です
+        uses: actions/upload-artifact@v4
         with:
           name: Nature-Canvas-Final
           path: final_video.mp4
