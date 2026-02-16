@@ -1,4 +1,4 @@
-name: Nature Canvas Animator Pro
+name: Nature Canvas Animator Pro PNG
 on:
   repository_dispatch:
     types: [start-build]
@@ -20,13 +20,12 @@ jobs:
           curl -L "${{ github.event.client_payload.rain_url }}" -o rain.mp3
           curl -L "${{ github.event.client_payload.fire_url }}" -o fire.mp3
 
-          # 2. FFmpegで魔法をかける
-          # drawrain: 雨の筋を描画
-          # eq: 明るさを時間（t）に合わせて揺らし、火の光を再現
-          # pan/afade: 擬似バイノーラルとフェードイン
+          # 2. FFmpegで合成
+          # -i background.png : ここをPNGに変更
+          # noiseフィルターで雨の質感を、eqフィルターで暖炉の光の揺らぎを再現
           ffmpeg -loop 1 -i background.png -i rain.mp3 -i fire.mp3 -filter_complex \
           "[0:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080, \
-           drawrain=w=1920:h=1080:c=1:s=10, \
+           noise=alls=15:allf=t+u, \
            eq=brightness='0.05*sin(t*10)+0.02*sin(t*23)'[v_effect]; \
            [1:a]pan=stereo|c0=0.8*c0|c1=0.4*c1[rain_spatial]; \
            [2:a]afade=t=in:st=2:d=5,pan=stereo|c0=0.3*c0|c1=0.9*c1[fire_spatial]; \
@@ -36,5 +35,5 @@ jobs:
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: Nature-Canvas-Animated
+          name: Nature-Canvas-Animated-PNG
           path: final_video.mp4
