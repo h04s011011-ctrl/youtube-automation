@@ -66,5 +66,3 @@ jobs:
           name: Nature-Canvas-Template-Result
 
           path: output.mp4
-
-```
