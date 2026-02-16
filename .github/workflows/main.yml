@@ -1,4 +1,4 @@
-name: Nature Canvas Cinematic Final Pro
+name: Nature Canvas Zero-Cost Master
 on:
   repository_dispatch:
     types: [start-build]
@@ -13,23 +13,22 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: 最高画質レイヤー合成
+      - name: 究極の0円合成
         run: |
           curl -L "${{ github.event.client_payload.rain_video }}" -o v_rain.mp4
           curl -L "${{ github.event.client_payload.fire_video }}" -o v_fire.mp4
           curl -L "${{ github.event.client_payload.rain_audio }}" -o a_rain.mp3
           curl -L "${{ github.event.client_payload.fire_audio }}" -o a_fire.mp3
 
-          # 修正ポイント：
-          # 1. すべてのレイヤーを 2752x1536 に統一（画像サイズに合わせる）
-          # 2. 暖炉の位置をこの高解像度に合わせて x=160, y=810 に調整
+          # 修正の魔法:
+          # 1. format=yuva420p を指定して色の狂いを防止
+          # 2. luma_mode=screen で「光」だけを抽出し、紫化を回避
+          # 3. 火の座標を 160:810 (2752x1536画像用) に最適化
           ffmpeg -loop 1 -i background.png -i v_rain.mp4 -i v_fire.mp4 -i a_rain.mp3 -i a_fire.mp3 -filter_complex \
-          "[1:v]scale=2752:1536,format=rgba,colorchannelmixer=aa=0.15[rain]; \
-           [0:v][rain]overlay=shortest=1[v_with_rain]; \
-           [2:v]scale=550:460,boxblur=15[fire_scaled]; \
-           color=black:s=2752x1536[canvas]; \
-           [canvas][fire_scaled]overlay=x=160:y=810:shortest=1[fire_full]; \
-           [v_with_rain][fire_full]blend=all_mode='screen':all_opacity=1[v_final]; \
+          "[1:v]scale=2752:1536,format=yuva420p,colorchannelmixer=aa=0.1[rain]; \
+           [2:v]scale=600:500,boxblur=20,format=yuva420p[fire_scaled]; \
+           [0:v][rain]overlay=shortest=1[v_rain]; \
+           [v_rain][fire_scaled]overlay=x=160:y=810:format=auto:shortest=1,blend=all_mode='lighten':all_opacity=0.8[v_final]; \
            [3:a]pan=stereo|c0=0.8*c0|c1=0.4*c1[rain_a]; \
            [4:a]afade=t=in:st=2:d=5,pan=stereo|c0=0.3*c0|c1=0.9*c1[fire_a]; \
            [rain_a][fire_a]amix=inputs=2:duration=first[aout]" \
@@ -38,5 +37,5 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Nature-Canvas-Ultimate-Result
+          name: Nature-Canvas-ZeroCost-Final
           path: final_video.mp4
