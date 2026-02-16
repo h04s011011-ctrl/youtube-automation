@@ -21,8 +21,7 @@ jobs:
           curl -L "${{ github.event.client_payload.fire_url }}" -o fire.mp3
 
           # 2. FFmpegで合成
-          # -i background.png : ここをPNGに変更
-          # noiseフィルターで雨の質感を、eqフィルターで暖炉の光の揺らぎを再現
+          # background.png をループさせ、雨(noise)と光の揺らぎ(eq)を追加
           ffmpeg -loop 1 -i background.png -i rain.mp3 -i fire.mp3 -filter_complex \
           "[0:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080, \
            noise=alls=15:allf=t+u, \
