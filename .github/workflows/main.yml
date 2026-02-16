@@ -13,22 +13,23 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: プロ級レイヤー合成
+      - name: 精密レイヤー合成（エラー解消版）
         run: |
           curl -L "${{ github.event.client_payload.rain_video }}" -o v_rain.mp4
           curl -L "${{ github.event.client_payload.fire_video }}" -o v_fire.mp4
           curl -L "${{ github.event.client_payload.rain_audio }}" -o a_rain.mp3
           curl -L "${{ github.event.client_payload.fire_audio }}" -o a_fire.mp3
 
-          # 合成マジック：
-          # [fire] scaleで暖炉サイズに。boxblurで端をボカす。
-          # blend=all_mode='screen' で火の光だけを背景に溶け込ませる。
-          # overlayのx=110:y=560が、今回の画像の暖炉にピッタリの位置です。
+          # 修正ポイント：
+          # [v1]の入力を整理し、火を黒背景のキャンバスに乗せてから「スクリーン合成」することで
+          # 暖炉の位置（110, 560）にだけ光を溶け込ませます。
           ffmpeg -loop 1 -i background.png -i v_rain.mp4 -i v_fire.mp4 -i a_rain.mp3 -i a_fire.mp3 -filter_complex \
           "[1:v]scale=1920:1080,format=rgba,colorchannelmixer=aa=0.15[rain]; \
-           [2:v]scale=380:320,boxblur=15,format=rgba[fire_pre]; \
-           [0:v][rain]overlay=shortest=1[v1]; \
-           [v1][fire_pre]overlay=x=110:y=560:format=auto,blend=all_mode='screen':all_opacity=1[v_final]; \
+           [0:v][rain]overlay=shortest=1[v_with_rain]; \
+           [2:v]scale=380:320,boxblur=15[fire_scaled]; \
+           color=black:s=1920x1080[canvas]; \
+           [canvas][fire_scaled]overlay=x=110:y=560:shortest=1[fire_full]; \
+           [v_with_rain][fire_full]blend=all_mode='screen':all_opacity=1[v_final]; \
            [3:a]pan=stereo|c0=0.8*c0|c1=0.4*c1[rain_a]; \
            [4:a]afade=t=in:st=2:d=5,pan=stereo|c0=0.3*c0|c1=0.9*c1[fire_a]; \
            [rain_a][fire_a]amix=inputs=2:duration=first[aout]" \
@@ -37,5 +38,5 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Nature-Canvas-Cinematic-Result
+          name: Nature-Canvas-Perfect-Result
           path: final_video.mp4
