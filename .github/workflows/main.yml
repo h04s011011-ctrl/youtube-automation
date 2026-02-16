@@ -1,12 +1,33 @@
-name: Nature Canvas Test
+name: Nature Canvas Factory
 on:
   repository_dispatch:
     types: [start-build]
   workflow_dispatch:
 
 jobs:
-  test:
+  render:
     runs-on: ubuntu-latest
     steps:
-      - name: 受信テスト
-        run: echo "Pythonistaからの命令をキャッチしました！"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Download and Process
+        run: |
+          echo "📽️ 映像をダウンロード中..."
+          curl -L "${{ github.event.client_payload.v_url }}" -o base_video.mp4
+          
+          echo "🎵 音声をダウンロード中..."
+          curl -L "${{ github.event.client_payload.a_url }}" -o base_audio.mp3
+          
+          echo "🎬 動画合成を開始..."
+          # 映像と音を合成し、最短の素材に合わせる設定
+          ffmpeg -i base_video.mp4 -i base_audio.mp3 -c:v libx264 -preset superfast -crf 28 -c:a aac -b:a 128k -map 0:v:0 -map 1:a:0 -shortest -y final_video.mp4
+
+      - name: Upload Result
+        uses: upload-artifact@v4
+        with:
+          name: Nature-Canvas-Final
+          path: final_video.mp4
