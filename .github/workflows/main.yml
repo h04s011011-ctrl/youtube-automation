@@ -1,68 +1,37 @@
-name: Nature Canvas 1-Min Master Production
-
+name: Nature Canvas Factory
 on:
-
   repository_dispatch:
-
     types: [start-build]
-
-    workflow_dispatch:  # 👈 これを3行目あたりに追加
-
+  workflow_dispatch:
 
 jobs:
-
   render:
-
     runs-on: ubuntu-latest
-
     steps:
-
-      - name: Checkout
-
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install FFmpeg
-
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Download All Assets
-
+      - name: Download and Process
         run: |
-
-          curl -L "${{ github.event.client_payload.v_url }}" -o v_source.mp4
-
-          curl -L "${{ github.event.client_payload.a_url }}" -o a_source.mp3
-
-      - name: Render Master Video
-
-        run: |
-
-          # 渡された座標を使ってFFmpegで合成
-
-          POS="${{ github.event.client_payload.overlay_pos }}"
-
+          echo "📽️ 映像をダウンロード中..."
+          curl -L "${{ github.event.client_payload.v_url }}" -o base_video.mp4
           
+          echo "🎵 音声をダウンロード中..."
+          curl -L "${{ github.event.client_payload.a_url }}" -o base_audio.mp3
+          
+          echo "🧪 ファイルの状態を確認..."
+          ls -lh base_video.mp4 base_audio.mp3
+          
+          echo "🎬 動画合成を開始..."
+          # エラーが出やすい部分を強化したコマンド
+          ffmpeg -i base_video.mp4 -i base_audio.mp3 -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k -map 0:v:0 -map 1:a:0 -shortest -y final_video.mp4
 
-          ffmpeg -loop 1 -i base_image.jpg \
-
-            -stream_loop -1 -i v_source.mp4 \
-
-            -stream_loop -1 -i a_source.mp3 \
-
-            -filter_complex \
-
-            "[1:v]scale=800:-1[over]; [0:v][over]overlay=$POS:shortest=1[outv]; \
-
-             [2:a]afade=t=in:st=0:d=2,afade=t=out:st=58:d=2[aout]" \
-
-            -map "[outv]" -map "[aout]" -t 60 -c:v libx264 -pix_fmt yuv420p output.mp4
-
-      - name: Upload Artifact
-
-        uses: actions/upload-artifact@v4
-
+      - name: Upload Result
+        if: success()
+        uses: upload-artifact@v4
         with:
-
-          name: Nature-Canvas-Template-Result
-
-          path: output.mp4
+          name: Nature-Canvas-Final
+          path: final_video.mp4
