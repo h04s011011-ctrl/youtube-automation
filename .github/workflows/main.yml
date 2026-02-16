@@ -24,7 +24,7 @@ jobs:
           # drawrain: 雨の筋を描画
           # eq: 明るさを時間（t）に合わせて揺らし、火の光を再現
           # pan/afade: 擬似バイノーラルとフェードイン
-          ffmpeg -loop 1 -i background.jpg -i rain.mp3 -i fire.mp3 -filter_complex \
+          ffmpeg -loop 1 -i background.png -i rain.mp3 -i fire.mp3 -filter_complex \
           "[0:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080, \
            drawrain=w=1920:h=1080:c=1:s=10, \
            eq=brightness='0.05*sin(t*10)+0.02*sin(t*23)'[v_effect]; \
